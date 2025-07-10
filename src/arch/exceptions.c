@@ -120,21 +120,21 @@ uint64_t handle_sync_exception(uint64_t user_x0, uint64_t user_x1, uint64_t user
                 {
                     // x0 contains pointer to message structure
                     struct Message *user_msg = (struct Message*)saved_x0;
-                    uart_puts("DEBUG: SYS_SEND_MESSAGE called with ptr=");
-                    uart_hex((uint64_t)user_msg);
-                    uart_puts("\n");
+                    //uart_puts("DEBUG: SYS_SEND_MESSAGE called with ptr=");
+                    //uart_hex((uint64_t)user_msg);
+                    //uart_puts("\n");
                     
                     // try to access the message type
-                    uart_puts("DEBUG: Trying to read msg->type\n");
+                    //uart_puts("DEBUG: Trying to read msg->type\n");
                     uint64_t msg_type = user_msg->type;
-                    uart_puts("DEBUG: msg->type = ");
-                    uart_hex(msg_type);
-                    uart_puts("\n");
+                    //uart_puts("DEBUG: msg->type = ");
+                    //uart_hex(msg_type);
+                    //uart_puts("\n");
                     
                     int result = send_message(user_msg);
-                    uart_puts("DEBUG: send_message returned ");
-                    uart_hex(result);
-                    uart_puts("\n");
+                    //uart_puts("DEBUG: send_message returned ");
+                    //uart_hex(result);
+                    //uart_puts("\n");
                     return (uint64_t)result;  
                 }
                 

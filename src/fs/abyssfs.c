@@ -173,11 +173,11 @@ static void debug_dir_entry(struct abyssfs_dir_entry *dir) {
 
 
 static int create_file(const char *name, uint32_t inode_num) {
-    uart_puts("DEBUG: create_file called with name='");
+    /*uart_puts("DEBUG: create_file called with name='");
     uart_puts(name);
     uart_puts("' inode_num=");
     uart_hex(inode_num);
-    uart_puts("\n");
+    uart_puts("\n");*/
     
     char path_copy[256];
     strncpy(path_copy, name, sizeof(path_copy) - 1);
@@ -193,7 +193,7 @@ static int create_file(const char *name, uint32_t inode_num) {
         
         if (path_copy[0] == '\0') {
             dir_inode = get_inode(1);  
-            uart_puts("DEBUG: Using root directory inode\n");
+            //uart_puts("DEBUG: Using root directory inode\n");
         } else {
             dir_inode = get_inode_by_path(path_copy);
             if (!dir_inode) {
@@ -202,9 +202,9 @@ static int create_file(const char *name, uint32_t inode_num) {
                 uart_puts("\n");
                 return -1;
             }
-            uart_puts("DEBUG: Using directory inode for path: ");
+            /*uart_puts("DEBUG: Using directory inode for path: ");
             uart_puts(path_copy);
-            uart_puts("\n");
+            uart_puts("\n");*/
         }
     } else {
         filename = name;
@@ -217,7 +217,7 @@ static int create_file(const char *name, uint32_t inode_num) {
             }
         } else {
             dir_inode = get_inode(1);  
-            uart_puts("DEBUG: Using root directory inode\n");
+            //uart_puts("DEBUG: Using root directory inode\n");
         }
     }
     
@@ -350,9 +350,9 @@ static uint32_t alloc_inode(void) {
     uint32_t inodes_per_block = BLOCK_SIZE / sizeof(struct abyssfs_inode);
     uint32_t max_inodes = abyssfs.sb.inode_blocks * inodes_per_block;
     
-    uart_puts("Searching for free inode (max: ");
+    //uart_puts("Searching for free inode (max: ");
     
-    if (max_inodes >= 100) {
+    /*if (max_inodes >= 100) {
         uart_putc('0' + (max_inodes/100));
         uart_putc('0' + ((max_inodes/10)%10));
         uart_putc('0' + (max_inodes%10));
@@ -362,7 +362,7 @@ static uint32_t alloc_inode(void) {
     } else {
         uart_putc('0' + max_inodes);
     }
-    uart_puts(")\n");
+    uart_puts(")\n");*/
     
     
     for (uint32_t i = 1; i < max_inodes; i++) {
@@ -489,9 +489,9 @@ void abyssfs_run_test(void) {
 
 
 static int abyssfs_read_dir(const char *path, struct dirent *dirents, int max_entries) {
-    uart_puts("FORCE DEBUG - AbyssFS reading dir: ");
-    uart_puts(path);
-    uart_puts("\n");
+    //uart_puts("FORCE DEBUG - AbyssFS reading dir: ");
+    //uart_puts(path);
+    //uart_puts("\n");
     
     size_t entry_count = 0;
     
@@ -500,19 +500,19 @@ static int abyssfs_read_dir(const char *path, struct dirent *dirents, int max_en
     uint32_t dir_block;
     if (*path == '\0') {
         dir_block = abyssfs.sb.inode_blocks + 1;
-        uart_puts("DEBUG: Reading root directory, block=");
-        uart_hex(dir_block);
-        uart_puts("\n");
+        //uart_puts("DEBUG: Reading root directory, block=");
+        //uart_hex(dir_block);
+        //uart_puts("\n");
     } else {
         struct abyssfs_inode *dir_inode = get_inode_by_path(path);
         if (!dir_inode) {
-            uart_puts("DEBUG: Directory inode not found\n");
+            //uart_puts("DEBUG: Directory inode not found\n");
             return -1;
         }
         dir_block = dir_inode->blocks;
-        uart_puts("DEBUG: Reading subdirectory, block=");
-        uart_hex(dir_block);
-        uart_puts("\n");
+        //uart_puts("DEBUG: Reading subdirectory, block=");
+        //uart_hex(dir_block);
+        //uart_puts("\n");
     }
     
     struct abyssfs_dir_entry *dir = (struct abyssfs_dir_entry *)get_block(dir_block);
@@ -521,15 +521,15 @@ static int abyssfs_read_dir(const char *path, struct dirent *dirents, int max_en
         return -1;
     }
     
-    uart_puts("DEBUG: Starting directory scan\n");
+    //uart_puts("DEBUG: Starting directory scan\n");
     while (dir && dir->rec_len > 0 && entry_count < max_entries) {
-        uart_puts("DEBUG: Found entry '");
-        uart_puts(dir->name);
-        uart_puts("' inode=");
-        uart_hex(dir->inode);
-        uart_puts(" rec_len=");
-        uart_hex(dir->rec_len);
-        uart_puts("\n");
+        //uart_puts("DEBUG: Found entry '");
+        //uart_puts(dir->name);
+        //uart_puts("' inode=");
+        //uart_hex(dir->inode);
+        //uart_puts(" rec_len=");
+        //uart_hex(dir->rec_len);
+        //uart_puts("\n");
         
         dirents[entry_count].inode = dir->inode;
         strcpy(dirents[entry_count].name, dir->name);
@@ -538,9 +538,9 @@ static int abyssfs_read_dir(const char *path, struct dirent *dirents, int max_en
         dir = (struct abyssfs_dir_entry *)((char *)dir + dir->rec_len);
     }
     
-    uart_puts("DEBUG: Total entries found: ");
-    uart_hex(entry_count);
-    uart_puts("\n");
+    //uart_puts("DEBUG: Total entries found: ");
+    //uart_hex(entry_count);
+    //uart_puts("\n");
     
     return entry_count;
 }
@@ -564,28 +564,28 @@ static const char* get_basename(const char* path) {
 }
 
 static int allocate_blocks(void) {
-    uart_puts("FORCE DEBUG - Allocating blocks for AbyssFS\n");
+    //uart_puts("FORCE DEBUG - Allocating blocks for AbyssFS\n");
     
     if (abyssfs.blocks) {
-        uart_puts("FORCE DEBUG - Blocks already allocated\n");
+        //uart_puts("FORCE DEBUG - Blocks already allocated\n");
         return 0;
     }
 
     abyssfs.blocks = kalloc(BLOCK_SIZE * NUM_BLOCKS);
     if (!abyssfs.blocks) {
-        uart_puts("FORCE DEBUG - Failed to allocate blocks\n");
+        //uart_puts("FORCE DEBUG - Failed to allocate blocks\n");
         return -1;
     }
 
-    uart_puts("FORCE DEBUG - Successfully allocated blocks\n");
+    //uart_puts("FORCE DEBUG - Successfully allocated blocks\n");
     return 0;
 }
 
 
 static struct vfs_file *abyssfs_create_file(const char *path) {
-    uart_puts("AbyssFS: Creating file: ");
-    uart_puts(path);
-    uart_puts("\n");
+    //uart_puts("AbyssFS: Creating file: ");
+    //uart_puts(path);
+    //uart_puts("\n");
 
     
     if (*path == '/') path++;
@@ -650,18 +650,18 @@ static int abyssfs_unlink(const char *path) {
     struct abyssfs_dir_entry *dir = (struct abyssfs_dir_entry *)get_block(root_block);
     struct abyssfs_dir_entry *prev = NULL;
     
-    uart_puts("AbyssFS: Looking for entry: '");
-    uart_puts(path);
-    uart_puts("'\n");
+    //uart_puts("AbyssFS: Looking for entry: '");
+    //uart_puts(path);
+    //uart_puts("'\n");
     
     
     while (dir && dir->rec_len > 0) {
-        uart_puts("AbyssFS: Checking entry: '");
-        uart_puts(dir->name);
-        uart_puts("'\n");
+        //uart_puts("AbyssFS: Checking entry: '");
+        //uart_puts(dir->name);
+        //uart_puts("'\n");
         
         if (strcmp(dir->name, path) == 0) {
-            uart_puts("AbyssFS: Found entry to remove\n");
+            //uart_puts("AbyssFS: Found entry to remove\n");
             
             
             struct abyssfs_inode *inode = get_inode(dir->inode);
@@ -724,9 +724,9 @@ static struct abyssfs_inode* get_inode_by_path(const char *path) {
         int found = 0;
         
         while (dir && dir->rec_len > 0) {
-            uart_puts("Checking entry: ");
-            uart_puts(dir->name);
-            uart_puts("\n");
+            //uart_puts("Checking entry: ");
+            //uart_puts(dir->name);
+            //uart_puts("\n");
             
             if (strcmp(dir->name, token) == 0) {
                 inode = get_inode(dir->inode);
@@ -750,16 +750,16 @@ static struct abyssfs_inode* get_inode_by_path(const char *path) {
 }
 
 static int abyssfs_mkdir(const char *path) {
-    uart_puts("AbyssFS: Creating directory: ");
-    uart_puts(path);
-    uart_puts("\n");
+    //uart_puts("AbyssFS: Creating directory: ");
+    //uart_puts(path);
+    //uart_puts("\n");
     
     char path_copy[VFS_MAX_PATH];
     strcpy(path_copy, path);
     
     char *last_slash = strrchr(path_copy, '/');
     if (!last_slash) {
-        uart_puts("AbyssFS: Creating directory in current directory\n");
+        //uart_puts("AbyssFS: Creating directory in current directory\n");
         return -1; 
     }
     
@@ -776,11 +776,11 @@ static int abyssfs_mkdir(const char *path) {
         parent_path = "/";
     }
     
-    uart_puts("AbyssFS: Parent path: ");
-    uart_puts(parent_path);
-    uart_puts(", basename: ");
-    uart_puts(basename);
-    uart_puts("\n");
+    //uart_puts("AbyssFS: Parent path: ");
+    //uart_puts(parent_path);
+    //uart_puts(", basename: ");
+    //uart_puts(basename);
+    //uart_puts("\n");
     
     struct abyssfs_inode *parent_inode;
     uint32_t parent_inode_num;

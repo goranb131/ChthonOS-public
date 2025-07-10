@@ -45,33 +45,33 @@ struct vfs_file_operations ramfs_fops = {
 static ssize_t ramfs_read(struct vfs_file *file, char *buf, size_t count) {
     struct ramfs_file *rf = file->private_data;
     
-    uart_puts("RAMFS: Reading at position ");
+    /*uart_puts("RAMFS: Reading at position ");
     uart_hex(file->f_pos);
     uart_puts(" size is ");
     uart_hex(rf->size);
-    uart_puts("\n");
+    uart_puts("\n");*/
     
     
     if (file->f_pos >= rf->size) {
-        uart_puts("RAMFS: EOF reached\n");
+        //uart_puts("RAMFS: EOF reached\n");
         return 0;  
     }
     
     
     if (file->f_pos + count > rf->size) {
         count = rf->size - file->f_pos;
-        uart_puts("RAMFS: Limiting read to ");
+        /*uart_puts("RAMFS: Limiting read to ");
         uart_hex(count);
-        uart_puts(" bytes\n");
+        uart_puts(" bytes\n");*/
     }
     
     
     memcpy(buf, rf->content + file->f_pos, count);
     file->f_pos += count;
     
-    uart_puts("RAMFS: Read ");
+    /*uart_puts("RAMFS: Read ");
     uart_hex(count);
-    uart_puts(" bytes\n");
+    uart_puts(" bytes\n");*/
     
     return count;
 }
@@ -80,13 +80,13 @@ static ssize_t ramfs_read(struct vfs_file *file, char *buf, size_t count) {
 static ssize_t ramfs_write(struct vfs_file *file, const void *buf, size_t count) {
     struct ramfs_file *rf = file->private_data;
     
-    uart_puts("RAMFS: Writing ");
+    /*uart_puts("RAMFS: Writing ");
     uart_hex(count);
     uart_puts(" bytes at position ");
     uart_hex(file->f_pos);
     uart_puts(" current size is ");
     uart_hex(rf->size);
-    uart_puts("\n");
+    uart_puts("\n");*/
     
     
     if (file->f_pos + count > MAX_CONTENT) {
@@ -107,16 +107,16 @@ static ssize_t ramfs_write(struct vfs_file *file, const void *buf, size_t count)
             uart_puts("\n");
             rf->size = file->f_pos;
         }
-        uart_puts("RAMFS: Write successful\n");
+        //uart_puts("RAMFS: Write successful\n");
     }
     
     return count;
 }
 
 static struct vfs_file *ramfs_open(const char *path) {
-    uart_puts("RAMFS: Opening file: ");
+    /*uart_puts("RAMFS: Opening file: ");
     uart_puts(path);
-    uart_puts("\n");
+    uart_puts("\n");*/
     
     
     struct ramfs_file *rf = NULL;
@@ -156,9 +156,9 @@ void ramfs_init(void) {
 
 int ramfs_create_file(const char *path, const char *content)
 {
-    uart_puts("FORCE DEBUG - Creating file: ");
+    /*uart_puts("FORCE DEBUG - Creating file: ");
     uart_puts(path);
-    uart_puts("\n");
+    uart_puts("\n");*/
     
     
     for (int i = 0; i < MAX_FILES; i++) {
@@ -263,14 +263,14 @@ char* strrchr(const char* str, int c);
 
 
 static int ramfs_read_dir(const char* path, struct dirent* dirents, int max_entries) {
-    uart_puts("FORCE DEBUG - RAMFS: Reading directory '");
+    /*uart_puts("FORCE DEBUG - RAMFS: Reading directory '");
     uart_puts(path);
-    uart_puts("'\n");
+    uart_puts("'\n");*/
     
     int entry_count = 0;
     
-    uart_puts("FORCE DEBUG - Files array state:\n");
-    for (int i = 0; i < MAX_FILES; i++) {
+    //uart_puts("FORCE DEBUG - Files array state:\n");
+    /*for (int i = 0; i < MAX_FILES; i++) {
         if (files[i].used) {
             uart_puts("File ");
             uart_hex(i);
@@ -278,31 +278,31 @@ static int ramfs_read_dir(const char* path, struct dirent* dirents, int max_entr
             uart_puts(files[i].path);
             uart_puts("\n");
         }
-    }
+    }*/
     
     if (entry_count < max_entries) {
-        uart_puts("FORCE DEBUG - Adding .\n");
+        //uart_puts("FORCE DEBUG - Adding .\n");
         dirents[entry_count].inode = 1;
         strcpy(dirents[entry_count].name, ".");
         entry_count++;
     }
     
     if (entry_count < max_entries) {
-        uart_puts("FORCE DEBUG - Adding ..\n");
+        //uart_puts("FORCE DEBUG - Adding ..\n");
         dirents[entry_count].inode = 1;
         strcpy(dirents[entry_count].name, "..");
         entry_count++;
     }
     
-    uart_puts("FORCE DEBUG - Checking files array\n");
+    //uart_puts("FORCE DEBUG - Checking files array\n");
     for (int i = 0; i < MAX_FILES && entry_count < max_entries; i++) {
         if (files[i].used) {
-            uart_puts("FORCE DEBUG - Found used file: '");
-            uart_puts(files[i].path);
-            uart_puts("'\n");
+            //uart_puts("FORCE DEBUG - Found used file: '");
+            //uart_puts(files[i].path);
+            //uart_puts("'\n");
             
             if (is_file_in_dir(files[i].path, path)) {
-                uart_puts("FORCE DEBUG - File matches directory!\n");
+                //uart_puts("FORCE DEBUG - File matches directory!\n");
                 dirents[entry_count].inode = i + 2;
                 strcpy(dirents[entry_count].name, get_basename(files[i].path));
                 entry_count++;
@@ -310,9 +310,9 @@ static int ramfs_read_dir(const char* path, struct dirent* dirents, int max_entr
         }
     }
     
-    uart_puts("FORCE DEBUG - Total entries: ");
+    /*uart_puts("FORCE DEBUG - Total entries: ");
     uart_hex(entry_count);
-    uart_puts("\n");
+    uart_puts("\n");*/
     
     return entry_count;
 }
@@ -350,9 +350,9 @@ struct ramfs_file* ramfs_find_dir(const char *path) {
 
 
 static struct vfs_file *ramfs_create(const char *path) {
-    uart_puts("RAMFS: Creating file: ");
+    /*uart_puts("RAMFS: Creating file: ");
     uart_puts(path);
-    uart_puts("\n");
+    uart_puts("\n");*/
 
     
     char full_path[MAX_PATH];
@@ -397,18 +397,18 @@ static struct vfs_file *ramfs_create(const char *path) {
 }
 
 static int ramfs_unlink(const char *path) {
-    uart_puts("RAMFS: Unlinking file: ");
+    /*uart_puts("RAMFS: Unlinking file: ");
     uart_puts(path);
-    uart_puts("\n");
+    uart_puts("\n");*/
     
     for (int i = 0; i < MAX_FILES; i++) {
         if (files[i].used) {
-            uart_puts("RAMFS: Checking file: ");
+            /*uart_puts("RAMFS: Checking file: ");
             uart_puts(files[i].path);
-            uart_puts("\n");
+            uart_puts("\n");*/
             
             if (strcmp(files[i].path, path) == 0) {
-                uart_puts("RAMFS: Found file, marking unused\n");
+                //uart_puts("RAMFS: Found file, marking unused\n");
                 files[i].used = 0;  
                 files[i].size = 0;  
                 return 0;
@@ -421,9 +421,9 @@ static int ramfs_unlink(const char *path) {
 }
 
 static int ramfs_mkdir(const char *path) {
-    uart_puts("RAMFS: Creating directory: ");
+    /*uart_puts("RAMFS: Creating directory: ");
     uart_puts(path);
-    uart_puts("\n");
+    uart_puts("\n");*/
     
     for (int i = 0; i < MAX_FILES; i++) {
         if (!files[i].used) {
