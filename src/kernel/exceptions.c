@@ -12,6 +12,7 @@ typedef unsigned long uint64_t;
 #define SYS_GETC    2
 #define SYS_PUTS    3
 #define SYS_SEND_MESSAGE 4
+#define SYS_TEST    5   // test syscall
 
 // global variables to store register values
 static uint64_t saved_x0, saved_x1, saved_x2, saved_x8;
@@ -120,22 +121,30 @@ uint64_t handle_sync_exception(uint64_t user_x0, uint64_t user_x1, uint64_t user
                 {
                     // x0 contains pointer to message structure
                     struct Message *user_msg = (struct Message*)saved_x0;
-                    //uart_puts("DEBUG: SYS_SEND_MESSAGE called with ptr=");
-                    //uart_hex((uint64_t)user_msg);
-                    //uart_puts("\n");
+                    uart_puts("DEBUG: SYS_SEND_MESSAGE called with ptr=");
+                    uart_hex((uint64_t)user_msg);
+                    uart_puts("\n");
                     
                     // try to access the message type
-                    //uart_puts("DEBUG: Trying to read msg->type\n");
+                    uart_puts("DEBUG: Trying to read msg->type\n");
                     uint64_t msg_type = user_msg->type;
-                    //uart_puts("DEBUG: msg->type = ");
-                    //uart_hex(msg_type);
-                    //uart_puts("\n");
+                    uart_puts("DEBUG: msg->type = ");
+                    uart_hex(msg_type);
+                    uart_puts("\n");
                     
                     int result = send_message(user_msg);
-                    //uart_puts("DEBUG: send_message returned ");
-                    //uart_hex(result);
-                    //uart_puts("\n");
+                    uart_puts("DEBUG: send_message returned ");
+                    uart_hex(result);
+                    uart_puts("\n");
                     return (uint64_t)result;  
+                }
+                
+            case SYS_TEST:
+                {
+                    uart_puts("DEBUG: SYS_TEST called with x0=");
+                    uart_hex(saved_x0);
+                    uart_puts("\n");
+                    return saved_x0 + 1;  // test return input + 1
                 }
                 
             default:
@@ -175,7 +184,7 @@ uint64_t handle_sync_exception(uint64_t user_x0, uint64_t user_x1, uint64_t user
         case 0x15:
             uart_puts("Exception: SVC instruction\n");
             break;
-        case 0x20:  // Data Abort from lower EL (the one we're seeing)
+        case 0x20:  // Data Abort from lower EL 
             uart_puts("Exception: Data Abort from lower EL\n");
             break;
         case 0x21:  // Data Abort from same EL
@@ -192,7 +201,7 @@ uint64_t handle_sync_exception(uint64_t user_x0, uint64_t user_x1, uint64_t user
     }
     
     uart_puts("System halted due to unhandled exception.\n");
-    return 0x100000000ULL;  // Halt bits 63:32 = 1
+    return 0x100000000ULL;  // Halt - bits 63:32 = 1
 }
 
 #endif 

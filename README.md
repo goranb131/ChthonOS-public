@@ -1,6 +1,6 @@
 # ChthonOS - AArch64 Operating System
 
-**Version 1.0 "Tehom"**
+**Version 2.0 "Melinoë"**
 
 A minimal operating system for AArch64 (ARM64) architecture. Microkernel design with Plan 9 inspired message-passing IPC and 9p, virtual filesystem, and namespace support.
 
@@ -212,10 +212,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ChthonOS v1.0 (codename: **Tehom**) is the stable educational operating system designed for learning purposes and inclusion in an upcoming book on OS development. 
 
 ### Current Status
-- **Tehom (v1.0)**: Complete, stable educational OS - this branch/release
-- **Melinoe (v2.0)**: Active development with VirtIO, enhanced features - separate branches
+- **Tehom (v1.0)**: Complete, stable educational OS
+- **Melinoe (v2.0)**: Active development with VirtIO, enhanced features - separate branches - this one
 
-This codebase represents the **stable v1.0 release** that serves as the foundation for understanding operating system concepts. Tehom has fulfilled its primary purpose as a teaching tool.
+This codebase represents the **development v2.0 release**
 
 ### Repository Organization
 ```

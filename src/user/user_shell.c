@@ -5,7 +5,6 @@
 #define SYS_GETC    2
 #define SYS_PUTS    3
 
-// syscall wrapper functions
 static inline void putc(char c) {
     asm volatile(
         "mov x8, %0\n"
@@ -71,9 +70,8 @@ static void cmd_echo(const char *args) {
 }
 
 static void cmd_version(void) {
-    puts("ChthonOS v0.2.0 \"Abyss\"\n");
+    puts("ChthonOS v2.0.0 \"Melinoe\"\n");
     puts("Architecture: aarch64\n");
-    puts("Features: Plan9-IPC, EL0-Shell, AbyssFS\n");
     puts("Build: Development\n");
 }
 
@@ -102,7 +100,6 @@ static void execute_command(const char *cmdline) {
     
     while (*args == ' ') args++;
     
-    // match commands
     if (strncmp(cmdline, "echo", 4) == 0 && (cmd_len == 4)) {
         cmd_echo(args);
     } else if (strncmp(cmdline, "version", 7) == 0 && (cmd_len == 7)) {
@@ -136,7 +133,7 @@ void _user_shell_start(void) {
             if (c == 8 || c == 127) {
                 if (pos > 0) {
                     pos--;
-                    puts("\b \b");  // backspace, space, backspace
+                    puts("\b \b"); // backspace, space, backspace
                 }
                 continue;
             }
@@ -144,16 +141,15 @@ void _user_shell_start(void) {
             // normal characters
             if (pos < sizeof(buffer) - 1) {
                 buffer[pos++] = c;
-                putc(c);  // echo character
+                putc(c);  
             }
         }
-        
+
         // execute command
         execute_command(buffer);
     }
 }
 
-// required for linker
 void _user_shell_end(void) {
-    // just a marker for the linker
+        // just a marker for the linker
 }

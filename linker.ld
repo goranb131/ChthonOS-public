@@ -12,7 +12,7 @@ ENTRY(_start)
 
 SECTIONS
 {
-  /* kernel code and read‐only data */
+  /* Kernel code and read‐only data */
   .text : {
     *(.text*)
   }
@@ -21,7 +21,7 @@ SECTIONS
     *(.rodata*)
   }
 
-  /* initialized and uninitialized data */
+  /* Initialized and uninitialized data */
   .data : {
     *(.data*)
   }

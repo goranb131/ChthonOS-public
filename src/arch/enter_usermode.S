@@ -8,7 +8,7 @@ enter_usermode:
     msr     sp_el0,  x1        // user stack
     msr     elr_el1, x0        // user PC
     
-    // clear all general purpose registers for clean user start
+    // Clear all general purpose registers for clean user start
     mov     x0, #0
     mov     x1, #0
     mov     x2, #0
@@ -38,11 +38,10 @@ enter_usermode:
     mov     x26, #0
     mov     x27, #0
     mov     x28, #0
-    mov     x29, #0  // frame pointer
-    mov     x30, #0  // link register
+    mov     x29, #0  // Frame pointer
+    mov     x30, #0  // Link register
     
-    // disable interrupts in user mode for uninterrupted shell in this release 1
-    // this prevents timer interrupts from interfering with UART input
+    // disable interrupts in user mode for shell
     mov     x2, #(1 << 7) // SPSR = EL0t, IRQs disabled (I=1)
     msr     spsr_el1, x2
     isb

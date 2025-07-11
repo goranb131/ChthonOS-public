@@ -1,28 +1,27 @@
-/* EL0 syscall test */
     .section .user, "ax"
     .global  _user_start
 
 _user_start:
-    // test syscall, just output a character
+    // Test syscall first - just output a character
     mov     x8, #1        // SYS_PUTC
-    mov     x0, #'A'      // char to print
-    svc     #0            // make syscall
+    mov     x0, #'A'      // char
+    svc     #0            // syscall
     
-    // test another character
-    mov     x8, #1        
-    mov     x0, #'B'      
-    svc     #0            
+    // Test another character
+    mov     x8, #1        // SYS_PUTC
+    mov     x0, #'B'      // char
+    svc     #0            // syscall
     
-    // test string output
-    mov     x8, #3        
-    adr     x0, test_msg  
-    svc     #0            
+    // Test string output
+    mov     x8, #3        // SYS_PUTS
+    adr     x0, test_msg  // string
+    svc     #0            // syscall
     
     // Loop forever
 1:  wfi
     b       1b
 
-// data section
+// Data section
     .section .user, "ax"
 test_msg:
     .asciz "Hello from EL0 syscall!\n"

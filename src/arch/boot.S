@@ -17,7 +17,7 @@ _start:
     // enable interrupts at EL1
     msr daifclr, #2
 
-    // set stack pointer near the top of region
+    // set stack pointer near the top of our region
     ldr x0, =stack_top
     mov sp, x0
 

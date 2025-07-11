@@ -32,10 +32,14 @@ enum msg_type {
     MSG_REMOVE,  // remove file
     MSG_MOVE,    // move/rename file
     MSG_UNBIND,
-    // console/terminal service messages
+    // console/Terminal service messages
     MSG_PUTC,    // put character to console
     MSG_GETC,    // get character from console  
     MSG_PUTS,    // put string to console
+    // Disk service messages
+    MSG_DISK_READ,   // read from disk
+    MSG_DISK_WRITE,  // write to disk
+    MSG_DISK_STATUS, // get disk status
 };
 
 #define MSG_NONBLOCK 0x01

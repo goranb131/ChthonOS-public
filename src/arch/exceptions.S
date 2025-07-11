@@ -16,13 +16,13 @@ exception_vector_table:
     .align 7 ;  b .
     .align 7 ;  b .
 
-/* lower EL (EL0)  */
+/* Lower EL (EL0)  */
     .align 7 ;  b sync_handler
     .align 7 ;  b curr_el_irq
     .align 7 ;  b .
     .align 7 ;  b .
 
-/* lower EL AArch32 unused */
+/* Lower EL AArch32 unused */
     .align 7 ;  b .
     .align 7 ;  b .
     .align 7 ;  b .
@@ -45,20 +45,21 @@ sync_handler:
     // pass saved register values to C handler
     ldp     x0, x1, [sp]          // load saved x0, x1 as args 0,1
     ldp     x2, x3, [sp,#16]      // load saved x2, x3 as args 2,3
-    // need to load saved x8 into x3 (4th argument)
+    // But we want: handle_sync_exception(user_x0, user_x1, user_x2, user_x8)
+    // So we need to load saved x8 into x3 (4th argument)
     ldr     x3, [sp,#64]          // load saved x8 as 4th argument
     bl      handle_sync_exception
     
-    // check. bits 63:32 = 0 for syscall, 1 for halt
-    // for syscalls bits 31:0 = return value for users x0
+    // Check return value: bits 63:32 = 0 for syscall, 1 for halt
+    // for syscalls, bits 31:0 = return value for user's x0
     mov     x1, x0                // save full return value
     lsr     x2, x0, #32           // extract upper 32 bits
     cmp     x2, #0                // check if upper bits are 0 (syscall) or 1 (halt)
-    bne     halt_system           // if non-zero then halt
+    bne     halt_system           // if non-zero, halt
     
     // normal return path for syscalls
     // store syscall return value in users x0 register
-    str     x1, [sp]              // store return value in saved x0 slot
+    str     x1, [sp]              // Store return value in saved x0 slot
     
     ldp     x8, x9, [sp,#64]      // restore x8, x9
     ldp     x6, x7, [sp,#48]      // restore x6, x7

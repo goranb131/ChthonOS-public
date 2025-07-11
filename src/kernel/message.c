@@ -3,7 +3,10 @@
 #include "uart.h"
 #include "vfs.h"
 #include "string.h"
+#include "virtio.h"
 
+// external reference to VirtIO block device
+extern struct virtio_block_device vblk;
 
 int queue_message(struct process *proc, struct Message *msg) {
     struct message_queue *queue = &proc->msg_queue;
@@ -15,7 +18,6 @@ int queue_message(struct process *proc, struct Message *msg) {
     memcpy(&queue->messages[queue->tail], msg, sizeof(struct Message));
     queue->tail = (queue->tail + 1) % MAX_MESSAGES;
     queue->count++;
-    
     
     if (proc->msg_blocked) {
         proc->msg_blocked = 0;
@@ -47,11 +49,9 @@ int send_message(struct Message *msg) {
         }
         case MSG_FORK: {
             struct process *new = create_process();
-            if (!new) return -1;
-            
+            if (!new) return -1;    
             
             msg->pid = new->pid;  
-            
             
             if (new == get_current_process()) {
                 return 0;
@@ -68,7 +68,6 @@ int send_message(struct Message *msg) {
             uart_puts("Parent (PID ");
             uart_hex(current->pid);
             uart_puts(") waiting for children\n");
-            
             
             struct process *p = process_list;
             while (p) {
@@ -107,12 +106,12 @@ int send_message(struct Message *msg) {
             return 0;
         }
         case MSG_READ_DIR:
-            //uart_puts("DEBUG: MSG_READ_DIR received\n");
+            uart_puts("DEBUG: MSG_READ_DIR received\n");
             return handle_read_dir_message(msg);
         case MSG_CREATE: {
-            //uart_puts("DEBUG: MSG_CREATE received for path: ");
-            //uart_puts(msg->path);
-            //uart_puts("\n");
+            uart_puts("DEBUG: MSG_CREATE received for path: ");
+            uart_puts(msg->path);
+            uart_puts("\n");
             int fd = vfs_create(msg->path);
             if (fd >= 0) {
                 vfs_close(fd);  // close immediately like touch does
@@ -122,11 +121,11 @@ int send_message(struct Message *msg) {
             return -1;          // fail
         }
         case MSG_MKDIR: {
-            //uart_puts("DEBUG: MSG_MKDIR received for path: ");
-            //uart_puts(msg->path);
-            //uart_puts("\n");
+            uart_puts("DEBUG: MSG_MKDIR received for path: ");
+            uart_puts(msg->path);
+            uart_puts("\n");
             int result = vfs_mkdir(msg->path);
-            return result;      // return mkdir result directly
+            return result;      // Return mkdir result directly
         }
         case MSG_GETCWD: {
             struct process *current = get_current_process();
@@ -150,7 +149,7 @@ int send_message(struct Message *msg) {
             process_t *current = get_current_process();
             if (!current) {
                 msg->status = -1;
-                return -1;
+                break;
             }
 
             // full path
@@ -166,10 +165,10 @@ int send_message(struct Message *msg) {
             }
             full_path[sizeof(full_path) - 1] = '\0';
 
-            // handle ..
-            //uart_puts("DEBUG: Before normalization: "); uart_puts(full_path); uart_puts("\n");
+            // handle .. 
+            uart_puts("DEBUG: Before normalization: "); uart_puts(full_path); uart_puts("\n");
             vfs_normalize_path(full_path);
-            //uart_puts("DEBUG: After normalization: "); uart_puts(full_path); uart_puts("\n");
+            uart_puts("DEBUG: After normalization: "); uart_puts(full_path); uart_puts("\n");
 
             // if directory exists and is accessible
             struct dirent dirents[1];
@@ -177,16 +176,16 @@ int send_message(struct Message *msg) {
             if (count >= 0) {
                 strncpy(current->cwd, full_path, sizeof(current->cwd) - 1);
                 current->cwd[sizeof(current->cwd) - 1] = '\0';
-                //uart_puts("DEBUG: Updated cwd to: "); uart_puts(current->cwd); uart_puts("\n");
+                uart_puts("DEBUG: Updated cwd to: "); uart_puts(current->cwd); uart_puts("\n");
                 msg->status = 0;
             } else {
-                //uart_puts("DEBUG: Directory not accessible: "); uart_puts(full_path); uart_puts("\n");
+                uart_puts("DEBUG: Directory not accessible: "); uart_puts(full_path); uart_puts("\n");
                 msg->status = -1;
             }
             return msg->status;
         }
         case MSG_COPY: {
-            //uart_puts("DEBUG: MSG_COPY received\n");
+            uart_puts("DEBUG: MSG_COPY received\n");
             
             if (!msg->path || !msg->data) {
                 uart_puts("DEBUG: Missing source or destination path\n");
@@ -196,11 +195,11 @@ int send_message(struct Message *msg) {
             char *src_path = msg->path;
             char *dst_path = (char *)msg->data;
             
-            /*uart_puts("DEBUG: Copying from: ");
+            uart_puts("DEBUG: Copying from: ");
             uart_puts(src_path);
             uart_puts(" to: ");
             uart_puts(dst_path);
-            uart_puts("\n");*/
+            uart_puts("\n");
             
             // read source file
             int src_fd = vfs_open(src_path);
@@ -236,16 +235,16 @@ int send_message(struct Message *msg) {
             vfs_close(src_fd);
             vfs_close(dst_fd);
             
-            /*uart_puts("DEBUG: Copy completed, bytes copied: ");
+            uart_puts("DEBUG: Copy completed, bytes copied: ");
             uart_hex(total_copied);
-            uart_puts("\n");*/
+            uart_puts("\n");
             
             return 0;
         }
         case MSG_REMOVE: {
-            /*uart_puts("DEBUG: MSG_REMOVE received for path: ");
+            uart_puts("DEBUG: MSG_REMOVE received for path: ");
             uart_puts(msg->path);
-            uart_puts("\n");*/
+            uart_puts("\n");
             
             if (!msg->path) {
                 uart_puts("DEBUG: No path provided for removal\n");
@@ -263,7 +262,7 @@ int send_message(struct Message *msg) {
             return 0;
         }
         case MSG_MOVE: {
-            //uart_puts("DEBUG: MSG_MOVE received\n");
+            uart_puts("DEBUG: MSG_MOVE received\n");
             
             if (!msg->path || !msg->data) {
                 uart_puts("DEBUG: Missing source or destination path\n");
@@ -273,14 +272,14 @@ int send_message(struct Message *msg) {
             char *src_path = msg->path;
             char *dst_path = (char *)msg->data;
             
-            /*uart_puts("DEBUG: Moving from: ");
+            uart_puts("DEBUG: Moving from: ");
             uart_puts(src_path);
             uart_puts(" to: ");
             uart_puts(dst_path);
-            uart_puts("\n");*/
+            uart_puts("\n");
             
             // no vfs_rename, so implementation is copy + remove
-            
+
             // try to copy the file
             int src_fd = vfs_open(src_path);
             if (src_fd < 0) {
@@ -330,21 +329,21 @@ int send_message(struct Message *msg) {
             return 0;
         }
         case MSG_BIND: {
-            //uart_puts("DEBUG: MSG_BIND received\n");
+            uart_puts("DEBUG: MSG_BIND received\n");
             
             if (!msg->path || !msg->data) {
                 uart_puts("DEBUG: Missing old or new path for bind\n");
                 return -1;
             }
             
-            char *source_path = msg->path;       
+            char *source_path = msg->path;        
             char *target_path = (char *)msg->data;  
             
-            /*uart_puts("DEBUG: Binding ");
+            uart_puts("DEBUG: Binding ");
             uart_puts(target_path);
             uart_puts(" -> ");
             uart_puts(source_path);
-            uart_puts("\n");*/
+            uart_puts("\n");
             
             // bind function: bind(source, target) makes target show source contents
             int result = bind(target_path, source_path, 16); // MREPL = 16
@@ -353,7 +352,7 @@ int send_message(struct Message *msg) {
                 return -1;
             }
             
-            //uart_puts("DEBUG: bind() succeeded\n");
+            uart_puts("DEBUG: bind() succeeded\n");
             return 0;
         }
         case MSG_UNBIND:
@@ -371,9 +370,31 @@ int send_message(struct Message *msg) {
             uart_puts(msg->string);
             return 0;
         }
+        case MSG_DISK_STATUS: {
+            uart_puts("VirtIO: Disk status requested\n");
+            if (vblk.initialized) {
+                uart_puts("VirtIO: Block device is initialized and ready\n");
+                return 1;  // device ready
+            } else {
+                uart_puts("VirtIO: No block device found\n");
+                return 0;  // no device
+            }
+        }
+        case MSG_DISK_READ: {
+            uart_puts("VirtIO: Disk read requested\n");
+            // test function call
+            return virtio_block_read(0, NULL, 1);
+        }
+        case MSG_DISK_WRITE: {
+            uart_puts("VirtIO: Disk write requested\n");
+            // test
+            return virtio_block_write(0, NULL, 1);
+        }
         default:
             return -1;
     }
+    
+    return -1;
 }
 
 int receive_message(struct Message *msg) {
@@ -417,6 +438,12 @@ int handle_message(struct Message *msg) {
         case MSG_GETC:
             return send_message(msg);
         case MSG_PUTS:
+            return send_message(msg);
+        case MSG_DISK_STATUS:
+            return send_message(msg);
+        case MSG_DISK_READ:
+            return send_message(msg);
+        case MSG_DISK_WRITE:
             return send_message(msg);
         default:
             uart_puts("Unknown message type: ");

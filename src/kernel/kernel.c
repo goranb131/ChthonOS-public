@@ -12,6 +12,7 @@
 #include "message.h"
 #include <stddef.h>
 #include "shell.h"
+#include "virtio.h"
 
 void test_vfs(void);
 void test_ramfs(void);
@@ -60,12 +61,13 @@ void kernel_main(void)
     //shell();                   
     uart_puts("Shell exited; continuing boot…\n\n");
 
-    /* enable timer/GIC and create EL0 task */
     timer_init();
     gic_init();
+    
+    virtio_init();
 
     // user shell is already positioned at 0x80000000 by the linker
-    // no need to copy it, just use directly
+    // no need to copy it, just use it directly
     uart_puts("User shell is already at 0x80000000, no copy needed\n");
     
     process_t *user = process_create((void*)0x80000000);  // user space address

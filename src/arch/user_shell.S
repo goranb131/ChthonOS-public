@@ -1,4 +1,4 @@
-/* user_shell.S - "simple" EL0 userspace shell with inline command parsing */
+/* user_shell.S - "simple" EL0 shell with inline command parsing */
     .section .user, "ax"
     .global  _user_shell_start
     .global  _user_shell_end
@@ -11,18 +11,18 @@ _user_shell_start:
 print_prompt:
     // print prompt: $
     mov     x8, #1        // SYS_PUTC
-    mov     x0, #'$'      // char print
-    svc     #0            // syscall
+    mov     x0, #'$'      // char to print
+    svc     #0            // make syscall
     
     // print space after prompt
     mov     x8, #1        // SYS_PUTC
-    mov     x0, #' '      // space character
-    svc     #0            // syscall
+    mov     x0, #' '      // space char
+    svc     #0            // make syscall
 
 input_loop:
     // get character from user
-    mov     x8, #2        // SYS_GETC
-    svc     #0            // syscall
+    mov     x8, #2        // SYS_getC
+    svc     #0            // make syscall
     mov     x1, x0        // save input character
     
     // check if its Enter/Return
@@ -48,7 +48,7 @@ input_loop:
     // echo the character back
     mov     x0, x1        // set output character
     mov     x8, #1        // SYS_PUTC
-    svc     #0            // syscall
+    svc     #0            // make syscall
     
     b       input_loop
 
@@ -57,7 +57,7 @@ handle_backspace:
     cmp     x3, #0
     beq     input_loop      // ignore if buffer empty
     
-    // remove last character from buffer
+    // Remove last character from buffer
     sub     x3, x3, #1
     
     // send backspace sequence: \b \b
@@ -66,7 +66,7 @@ handle_backspace:
     svc     #0
     
     mov     x8, #1        // SYS_PUTC
-    mov     x0, #' '      // space (to erase character)
+    mov     x0, #' '      // space erase character
     svc     #0
     
     mov     x8, #1        // SYS_PUTC
@@ -81,8 +81,8 @@ process_command:
     
     // print newline
     mov     x8, #1        // SYS_PUTC
-    mov     x0, #'\n'     // newline
-    svc     #0            // syscall
+    mov     x0, #'\n'     // newline character
+    svc     #0            // make syscall
     
     // check if command is empty
     cmp     x3, #0
@@ -223,7 +223,7 @@ check_ls:
     cmp     w4, #' '
     bne     check_touch     // must have space after "ls" or be exactly "ls"
     
-    // find path start (skip spaces after "ls")
+    // find start of path (skip spaces after "ls")
     mov     x4, #3          // start after "ls "
 find_ls_path:
     cmp     x4, x3
@@ -235,9 +235,9 @@ find_ls_path:
     b       find_ls_path
     
 found_ls_path:
-    // x4 now points to path start
-    // Calculate path length
-    mov     x5, x4          // path start
+    // x4 now points to start of path
+    // calculate path length
+    mov     x5, x4          // start of path
     mov     x6, x4          // end pointer
 find_ls_path_end:
     cmp     x6, x3
@@ -263,13 +263,13 @@ ls_path_found:
     b       ls_with_path
     
 ls_no_args:
-    // for ls with no arguments, use current working directory
-    // will allocate extra space for the path and use MSG_GETCWD
+    // For ls with no arguments, use current working directory
+    // We'll allocate extra space for the path and use MSG_getCWD
     
 ls_with_path:
-    // ls command - list directory contents
+    // handle ls command - list directory contents
     // allocate space for message struct + directory entries + path buffer
-    // message struct: 96 bytes
+    // Message struct: 96 bytes
     // directory entries: 4KB for dirents 
     // path buffer: 512 bytes for current directory path
     sub     sp, sp, #512     // path buffer (512 bytes)
@@ -285,7 +285,7 @@ ls_with_path:
     
 ls_get_cwd:
     // get current working directory first
-    // init message structure for MSG_GETCWD
+    // init message structure for MSG_getCWD
     mov     x4, sp           // point to message struct
     
     // clear message structure
@@ -296,8 +296,8 @@ clear_ls_cwd_msg:
     subs    x6, x6, #1
     bge     clear_ls_cwd_msg
     
-    // set up message fields for MSG_GETCWD
-    mov     x5, #15          // MSG_GETCWD
+    // Set up message fields for MSG_getCWD
+    mov     x5, #15          // MSG_getCWD
     str     x5, [x4]         // msg.type
     
     add     x5, sp, #96      // point to path buffer (after message struct)
@@ -322,7 +322,7 @@ clear_ls_cwd_msg:
     b       ls_do_readdir
     
 ls_cwd_error:
-    // Fall back to root path on error
+    // root path on error
     adr     x9, root_path    // point to "/"
     
 ls_do_readdir:
@@ -335,7 +335,7 @@ ls_do_readdir:
     mov     x4, #0
     str     x4, [sp, #16]    // msg->argv
     
-    // set data pointer to space after message (at offset 96)
+    // Set data pointer to space after message (at offset 96)
     add     x4, sp, #96
     str     x4, [sp, #24]    // msg->data (space for dirents)
     
@@ -362,25 +362,25 @@ ls_do_readdir:
     cmp     x0, #0
     blt     ls_error
     
-    // Get result from message
+    // get result from message
     ldr     x4, [sp, #72]    // msg->dirent_count (corrected offset)
     cmp     x4, #0
     beq     ls_empty
     
-    // Directory entries are in msg->data (at sp+96)
+    // directory entries are in msg->data (at sp+96)
     add     x5, sp, #96      // point to directory entries
-    mov     x6, #0           // Counter
+    mov     x6, #0           // counter
     
 ls_loop:
-    cmp     x6, x4           // Compare counter with count
+    cmp     x6, x4           // compare counter with count
     bge     ls_done
     
-    // Calculate dirent offset (each dirent is 8 + 256 = 264 bytes)
+    // calculate dirent offset (each dirent is 8 + 256 = 264 bytes)
     mov     x7, #264
     mul     x7, x6, x7
     add     x7, x5, x7       // x7 = dirents[i]
     
-    // Skip inode (8 bytes), print name at offset 8
+    // skip inode (8 bytes), print name at offset 8
     add     x7, x7, #8
     mov     x9, x7           // point to name
     
@@ -403,7 +403,7 @@ ls_name_done:
     mov     x8, #1           // SYS_PUTC
     svc     #0
     
-    add     x6, x6, #1       // Increment counter
+    add     x6, x6, #1       // increment counter
     b       ls_loop
     
 ls_empty:
@@ -431,7 +431,7 @@ ls_done_with_pwd_buffer:
 check_touch:
     // check for "touch" command (inline)
     cmp     x3, #5
-    blt     check_mkdir      // Try mkdir if not touch
+    blt     check_mkdir      // try mkdir if not touch
     ldrb    w4, [x2]
     cmp     w4, #'t'
     bne     check_mkdir
@@ -468,7 +468,7 @@ find_filename:
     
 found_filename:
     // x4 now points to start of filename
-    // Calculate filename length
+    // calculate filename length
     mov     x5, x4          // start of filename
     mov     x6, x4          // end pointer
 find_filename_end:
@@ -482,7 +482,7 @@ find_filename_end:
     
 filename_found:
     // x5 = start, x6 = end, length = x6 - x5
-    sub     x7, x6, x5      // Filename length
+    sub     x7, x6, x5      // filename length
     cmp     x7, #0
     beq     touch_no_args
     
@@ -536,7 +536,7 @@ touch_no_args:
     adr     x4, touch_usage_msg
     b       print_message_simple
 
-// Simple message print function (no stack operations)
+// simple message print function (no stack operations)
 print_message_simple:
     ldrb    w5, [x4]
     cmp     w5, #0
@@ -555,7 +555,7 @@ print_msg_simple_done:
 check_mkdir:
     // check for "mkdir" command (inline)
     cmp     x3, #5
-    blt     check_pwd        // Try pwd if not mkdir
+    blt     check_pwd        // try pwd if not mkdir
     ldrb    w4, [x2]
     cmp     w4, #'m'
     bne     check_pwd
@@ -592,7 +592,7 @@ find_dirname:
     
 found_dirname:
     // x4 now points to start of dirname
-    // Calculate dirname length
+    // calculate dirname length
     mov     x5, x4          // start of dirname
     mov     x6, x4          // end pointer
 find_dirname_end:
@@ -606,7 +606,7 @@ find_dirname_end:
     
 dirname_found:
     // x5 = start, x6 = end, length = x6 - x5
-    sub     x7, x6, x5      // Dirname length
+    sub     x7, x6, x5      // dirname length
     cmp     x7, #0
     beq     mkdir_no_args
     
@@ -663,7 +663,7 @@ mkdir_no_args:
 check_pwd:
     // check for "pwd" command (inline)
     cmp     x3, #3
-    blt     check_cd         // cd if not pwd
+    blt     check_cd         // try cd if not pwd
     ldrb    w4, [x2]
     cmp     w4, #'p'
     bne     check_cd
@@ -688,7 +688,7 @@ pwd_command:
     // allocate space for working directory path
     sub     sp, sp, #512     // 512 bytes for path buffer
     
-    // init message structure for MSG_GETCWD
+    // init message structure for MSG_getCWD
     sub     sp, sp, #64      // Message structure space
     mov     x4, sp
     
@@ -700,8 +700,8 @@ clear_pwd_msg:
     subs    x6, x6, #1
     bge     clear_pwd_msg
     
-    // set up message fields
-    mov     x5, #15          // MSG_GETCWD (MSG_CREATE=13, MSG_MKDIR=14, MSG_GETCWD=15)
+    // Set up message fields
+    mov     x5, #15          // MSG_getCWD (MSG_CREATE=13, MSG_MKDIR=14, MSG_getCWD=15)
     str     x5, [x4]         // msg.type
     
     add     x5, sp, #64      // point to path buffer
@@ -730,7 +730,7 @@ pwd_error:
 check_cd:
     // check for "cd" command (inline)
     cmp     x3, #2
-    blt     check_cp         // Try cp if not cd
+    blt     check_cp         // try cp if not cd
     ldrb    w4, [x2]
     cmp     w4, #'c'
     bne     check_cp
@@ -757,9 +757,9 @@ find_cd_path:
     b       find_cd_path
     
 found_cd_path:
-    // x4 now points to path start
-    // Calculate path length
-    mov     x5, x4           // path start
+    // x4 now points to start of path
+    // calculate path length
+    mov     x5, x4           // start of path
     mov     x6, x4           // end pointer
 find_cd_path_end:
     cmp     x6, x3
@@ -783,7 +783,7 @@ cd_path_found:
     sub     sp, sp, #96
     
     // init message structure for MSG_CHDIR
-    mov     x8, #16          // MSG_CHDIR (MSG_GETCWD=15, MSG_CHDIR=16)
+    mov     x8, #16          // MSG_CHDIR (MSG_getCWD=15, MSG_CHDIR=16)
     str     x8, [sp]         // msg->type
     
     // set path pointer to dirname in buffer
@@ -822,7 +822,7 @@ cd_error:
     b       print_message_simple
     
 cd_no_args:
-    // Change to root directory (default behavior)
+    // change to root directory (default behavior)
     // allocate space for message struct (96 bytes)
     sub     sp, sp, #96
     
@@ -830,7 +830,7 @@ cd_no_args:
     mov     x8, #16          // MSG_CHDIR
     str     x8, [sp]         // msg->type
     
-    // set path to root
+    // Set path to root
     adr     x8, root_path    // point to "/"
     str     x8, [sp, #8]     // msg->path
     
@@ -868,7 +868,7 @@ cd_error_noargs:
 check_cp:
     // check for "cp" command (inline)
     cmp     x3, #2
-    blt     check_rm         // Try rm if not cp
+    blt     check_rm         // try rm if not cp
     ldrb    w4, [x2]
     cmp     w4, #'c'
     bne     check_rm
@@ -888,7 +888,7 @@ check_cp:
     mov     x4, #3           // start after "cp "
 find_cp_src:
     cmp     x4, x3
-    bge     cp_no_args       // no source path found
+    bge     cp_no_args       // no src path
     ldrb    w5, [x2, x4]
     cmp     w5, #' '
     bne     found_cp_src
@@ -902,7 +902,7 @@ found_cp_src:
     // find end of source path
 find_cp_src_end:
     cmp     x4, x3
-    bge     cp_no_args       // no destination found
+    bge     cp_no_args       // No destination found
     ldrb    w6, [x2, x4]
     cmp     w6, #' '
     beq     found_cp_src_end
@@ -915,10 +915,10 @@ found_cp_src_end:
     strb    wzr, [x2, x4]
     
     // Now find destination path (skip spaces)
-    add     x4, x4, #1       // move past null terminator
+    add     x4, x4, #1       // Move past null terminator
 find_cp_dst:
     cmp     x4, x3
-    bge     cp_no_args       // no destination found
+    bge     cp_no_args       // No destination found
     ldrb    w6, [x2, x4]
     cmp     w6, #' '
     bne     found_cp_dst
@@ -946,7 +946,7 @@ cp_dst_found:
     
     // check if we have both source and destination
     cmp     x5, x6
-    bge     cp_no_args       // source and destination are the same or invalid
+    bge     cp_no_args       // Source and destination are the same or invalid
     
     // allocate space for message struct (96 bytes)
     sub     sp, sp, #96
@@ -955,7 +955,7 @@ cp_dst_found:
     mov     x8, #17          // MSG_COPY (MSG_CHDIR=16, MSG_COPY=17)
     str     x8, [sp]         // msg->type
     
-    // set source path pointer
+    // Set source path pointer
     add     x8, x2, x5       // point to source path
     str     x8, [sp, #8]     // msg->path
     
@@ -963,7 +963,7 @@ cp_dst_found:
     mov     x8, #0
     str     x8, [sp, #16]    // msg->argv
     
-    // set destination path pointer in data field
+    // Set destination path pointer in data field
     add     x8, x2, x6       // point to destination path
     str     x8, [sp, #24]    // msg->data
     
@@ -1004,7 +1004,7 @@ cp_no_args:
 check_rm:
     // check for "rm" command (inline)
     cmp     x3, #2
-    blt     check_mv         // mv if not rm
+    blt     check_mv         // try mv if not rm
     ldrb    w4, [x2]
     cmp     w4, #'r'
     bne     check_mv
@@ -1023,7 +1023,7 @@ check_rm:
     mov     x4, #3           // start after "rm "
 find_rm_file:
     cmp     x4, x3
-    bge     rm_no_args       // no filename found
+    bge     rm_no_args       // No filename found
     ldrb    w5, [x2, x4]
     cmp     w5, #' '
     bne     found_rm_file
@@ -1032,7 +1032,7 @@ find_rm_file:
     
 found_rm_file:
     // x4 now points to start of filename
-    // Calculate filename length
+    // calculate filename length
     mov     x5, x4           // start of filename
     mov     x6, x4           // end pointer
 find_rm_file_end:
@@ -1103,7 +1103,7 @@ rm_no_args:
 check_mv:
     // check for "mv" command (inline)
     cmp     x3, #2
-    blt     check_bind       // Try bind if not mv
+    blt     check_bind       // try bind if not mv
     ldrb    w4, [x2]
     cmp     w4, #'m'
     bne     check_bind
@@ -1123,7 +1123,7 @@ check_mv:
     mov     x4, #3           // start after "mv "
 find_mv_src:
     cmp     x4, x3
-    bge     mv_no_args       // no source path found
+    bge     mv_no_args       // no src path
     ldrb    w5, [x2, x4]
     cmp     w5, #' '
     bne     found_mv_src
@@ -1137,7 +1137,7 @@ found_mv_src:
     // find end of source path
 find_mv_src_end:
     cmp     x4, x3
-    bge     mv_no_args       // no destination found
+    bge     mv_no_args       // No destination found
     ldrb    w6, [x2, x4]
     cmp     w6, #' '
     beq     found_mv_src_end
@@ -1153,7 +1153,7 @@ found_mv_src_end:
     add     x4, x4, #1       // Move past null terminator
 find_mv_dst:
     cmp     x4, x3
-    bge     mv_no_args       // no destination found
+    bge     mv_no_args       // No destination found
     ldrb    w6, [x2, x4]
     cmp     w6, #' '
     bne     found_mv_dst
@@ -1198,7 +1198,7 @@ mv_dst_found:
     mov     x8, #0
     str     x8, [sp, #16]    // msg->argv
     
-    // set destination path pointer in data field
+    // Set destination path pointer in data field
     add     x8, x2, x6       // point to destination path
     str     x8, [sp, #24]    // msg->data
     
@@ -1239,7 +1239,7 @@ mv_no_args:
 check_bind:
     // check for "bind" command (inline)
     cmp     x3, #4
-    blt     check_unbind     // Try unbind if not bind
+    blt     check_unbind     // try unbind if not bind
     ldrb    w4, [x2]
     cmp     w4, #'b'
     bne     check_unbind
@@ -1265,7 +1265,7 @@ check_bind:
     mov     x4, #5           // start after "bind "
 find_bind_source:
     cmp     x4, x3
-    bge     bind_no_args     // no source path found
+    bge     bind_no_args     // no src path
     ldrb    w5, [x2, x4]
     cmp     w5, #' '
     bne     found_bind_source
@@ -1279,7 +1279,7 @@ found_bind_source:
     // find end of source
 find_bind_source_end:
     cmp     x4, x3
-    bge     bind_no_args     // no target path found
+    bge     bind_no_args     // no target path
     ldrb    w6, [x2, x4]
     cmp     w6, #' '
     beq     found_bind_source_end
@@ -1291,11 +1291,11 @@ found_bind_source_end:
     // null terminate source
     strb    wzr, [x2, x4]
     
-    // Now find target (skip spaces)
-    add     x4, x4, #1       // Move past null terminator
+    // now find target (skip spaces)
+    add     x4, x4, #1       // move past null terminator
 find_bind_target:
     cmp     x4, x3
-    bge     bind_no_args     // no target path found
+    bge     bind_no_args     // no target path
     ldrb    w6, [x2, x4]
     cmp     w6, #' '
     bne     found_bind_target
@@ -1332,7 +1332,7 @@ bind_paths_found:
     mov     x8, #6           // MSG_BIND = 6
     str     x8, [sp]         // msg->type
     
-    // set target path pointer (this goes in path field)
+    // Set target path pointer (this goes in path field)
     add     x8, x2, x6       // point to target path
     str     x8, [sp, #8]     // msg->path
     
@@ -1340,7 +1340,7 @@ bind_paths_found:
     mov     x8, #0
     str     x8, [sp, #16]    // msg->argv
     
-    // set source path pointer in data field
+    // Set source path pointer in data field
     add     x8, x2, x5       // point to source path
     str     x8, [sp, #24]    // msg->data
     
@@ -1381,25 +1381,25 @@ bind_no_args:
 check_unbind:
     // check for "unbind" command (inline)
     cmp     x3, #6
-    blt     unknown_command  // must be at least 6 chars for "unbind"
+    blt     check_dskread    // try dskread command if not "unbind"
     ldrb    w4, [x2]
     cmp     w4, #'u'
-    bne     unknown_command
+    bne     check_dskread
     ldrb    w4, [x2, #1]
     cmp     w4, #'n'
-    bne     unknown_command
+    bne     check_dskread
     ldrb    w4, [x2, #2]
     cmp     w4, #'b'
-    bne     unknown_command
+    bne     check_dskread
     ldrb    w4, [x2, #3]
     cmp     w4, #'i'
-    bne     unknown_command
+    bne     check_dskread
     ldrb    w4, [x2, #4]
     cmp     w4, #'n'
-    bne     unknown_command
+    bne     check_dskread
     ldrb    w4, [x2, #5]
     cmp     w4, #'d'
-    bne     unknown_command
+    bne     check_dskread
     
     // check if its exactly "unbind" or "unbind " (with argument)
     cmp     x3, #6
@@ -1408,7 +1408,7 @@ check_unbind:
     cmp     w4, #' '
     bne     unknown_command  // must have space after "unbind"
     
-    // find path start (skip spaces after "unbind")
+    // find start of path (skip spaces after "unbind")
     mov     x4, #7           // start after "unbind "
 find_unbind_path:
     cmp     x4, x3
@@ -1420,9 +1420,9 @@ find_unbind_path:
     b       find_unbind_path
     
 found_unbind_path:
-    // x4 now points to path start
+    // x4 now points to start of path
     // calculate path length
-    mov     x5, x4           // path start
+    mov     x5, x4           // start of path
     mov     x6, x4           // end pointer
 find_unbind_path_end:
     cmp     x6, x3
@@ -1449,7 +1449,7 @@ unbind_path_found:
     mov     x8, #20          // MSG_UNBIND = 20
     str     x8, [sp]         // msg->type
     
-    // path pointer
+    // Set path pointer
     add     x8, x2, x5       // point to path
     str     x8, [sp, #8]     // msg->path
     
@@ -1489,6 +1489,105 @@ unbind_no_args:
     adr     x4, unbind_usage_msg
     b       print_message_simple
 
+check_disk:
+    // check for "disk" command (inline)
+    cmp     x3, #4
+    blt     unknown_command  // must be at least 4 chars for "disk"
+    ldrb    w4, [x2]
+    cmp     w4, #'d'
+    bne     unknown_command
+    ldrb    w4, [x2, #1]
+    cmp     w4, #'i'
+    bne     unknown_command
+    ldrb    w4, [x2, #2]
+    cmp     w4, #'s'
+    bne     unknown_command
+    ldrb    w4, [x2, #3]
+    cmp     w4, #'k'
+    bne     unknown_command
+    
+    // check if its exactly "disk" (no args for now)
+    cmp     x3, #4
+    bne     unknown_command  // must be exactly "disk"
+    
+    // handle disk command 
+    // allocate space for message structure on stack
+    sub     sp, sp, #64      // space for message struct
+    mov     x4, sp           // x4 = pointer to message struct
+    
+    // init message struct for MSG_DISK_STATUS (value 26)
+    mov     x5, #26          // MSG_DISK_STATUS
+    str     x5, [x4]         // msg.type = MSG_DISK_STATUS
+    str     xzr, [x4, #8]    // msg.path = NULL
+    str     xzr, [x4, #16]   // msg.argv = NULL
+    str     xzr, [x4, #24]   // msg.data = NULL
+    str     xzr, [x4, #32]   // msg.size = 0
+    str     wzr, [x4, #40]   // msg.flags = 0
+    str     wzr, [x4, #44]   // msg.fd = 0
+    
+    // Call SYS_send_MESSAGE syscall
+    mov     x8, #4           // SYS_send_MESSAGE
+    mov     x0, x4           // x0 = pointer to message struct
+    svc     #0               // make syscall
+    
+    // Clean up stack and continue
+    add     sp, sp, #64      // restore stack
+    b       reset_and_prompt
+
+check_dskread:
+    // check for "dskread" command (inline)
+    cmp     x3, #7
+    blt     check_disk       // try disk command if not long enough for "dskread"
+    ldrb    w4, [x2]
+    cmp     w4, #'d'
+    bne     check_disk
+    ldrb    w4, [x2, #1]
+    cmp     w4, #'s'
+    bne     check_disk
+    ldrb    w4, [x2, #2]
+    cmp     w4, #'k'
+    bne     check_disk
+    ldrb    w4, [x2, #3]
+    cmp     w4, #'r'
+    bne     check_disk
+    ldrb    w4, [x2, #4]
+    cmp     w4, #'e'
+    bne     check_disk
+    ldrb    w4, [x2, #5]
+    cmp     w4, #'a'
+    bne     check_disk
+    ldrb    w4, [x2, #6]
+    cmp     w4, #'d'
+    bne     check_disk
+    
+    // check if its exactly "dskread" 
+    cmp     x3, #7
+    bne     check_disk       
+    
+    // handle dskread command - send message to kernel
+    // allocate space for message structure on stack
+    sub     sp, sp, #64      // Space for message struct
+    mov     x4, sp           // x4 = pointer to message struct
+    
+    // init message struct for MSG_DISK_READ (value 24)
+    mov     x5, #24          // MSG_DISK_READ
+    str     x5, [x4]         // msg.type = MSG_DISK_READ
+    str     xzr, [x4, #8]    // msg.path = NULL
+    str     xzr, [x4, #16]   // msg.argv = NULL
+    str     xzr, [x4, #24]   // msg.data = NULL
+    str     xzr, [x4, #32]   // msg.size = 0
+    str     wzr, [x4, #40]   // msg.flags = 0
+    str     wzr, [x4, #44]   // msg.fd = 0
+    
+    // Call SYS_send_MESSAGE syscall
+    mov     x8, #4           // SYS_send_MESSAGE
+    mov     x0, x4           // x0 = pointer to message struct
+    svc     #0               // make syscall
+    
+    // Clean up stack and continue
+    add     sp, sp, #64      // restore stack
+    b       reset_and_prompt
+
 unknown_command:
     // print "Unknown command" message (inline)
     adr     x4, unknown_msg
@@ -1513,12 +1612,12 @@ echo_loop:
 echo_done:
     // print newline after echo
     mov     x8, #1        // SYS_PUTC
-    mov     x0, #'\n'     // newline
-    svc     #0            // syscall
+    mov     x0, #'\n'     // newline character
+    svc     #0            // make syscall
     
     b       reset_and_prompt
 
-// inline print message (x4 = message pointer) - no FUNCTION CALLS
+// inline print message (x4 = message pointer) - NO FUNCTION CALLS
 print_message:
     ldrb    w5, [x4]
     cmp     w5, #0
@@ -1593,8 +1692,8 @@ print_msg_restore_pwd_done:
     b       reset_and_prompt
 
 reset_and_prompt:
-    // Reset buffer
-    mov     x3, #0          // Reset buffer length
+    // reset buffer
+    mov     x3, #0          // reset buffer length
     b       print_prompt
 
 // Data section
@@ -1607,7 +1706,7 @@ unknown_msg:
     .asciz "Unknown command\n"
 
 sysname_msg:
-    .asciz "ChthonOS v1.0 \"Tehom\"\nArchitecture: aarch64\nFeatures: Plan9-IPC, EL0-Shell, AbyssFS, RAMFS, Namespaces\nBuild: Release\n"
+    .asciz "ChthonOS v2.0 \"Melinoë\"\nArchitecture: aarch64\nBuild: Development\n"
 
 help_msg:
     .asciz "Available commands:\n  echo <text>  - Echo text\n  sysname      - Show OS version\n  help         - Show this help\n  clear        - clear screen\n  ls [path]    - List directory contents\n  touch <file> - Create empty file\n  mkdir <dir>  - Create directory\n  pwd          - print working directory\n  cd [dir]     - Change directory\n  cp <src> <dst> - Copy file\n  rm <file>    - Remove file\n  mv <src> <dst> - Move/rename file\n  bind <old> <new> - Create namespace binding\n  unbind <path> - Remove namespace binding\n"
@@ -1616,7 +1715,7 @@ root_path:
     .asciz "/"
 
 empty_msg:
-    .asciz "Directory is empty\n"
+    .asciz "directory is empty\n"
 
 ls_error_msg:
     .asciz "Error reading directory\n"
@@ -1668,5 +1767,8 @@ unbind_error_msg:
 
 unbind_usage_msg:
     .asciz "unbind: missing operand\nUsage: unbind <path>\n"
+
+disk_status_msg:
+    .asciz "VirtIO disk test - checking device status\n"
 
 _user_shell_end:

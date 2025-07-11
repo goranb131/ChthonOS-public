@@ -18,7 +18,6 @@
 
 #define cnthctl_el2 S3_4_C14_C1_0
 
-
 #define TIMER_INTERVAL 62500000  
 
 #define GICD_BASE       0x08000000UL
@@ -35,7 +34,6 @@
 void timer_init(void) {
     uart_puts("Timer initialized (disabled for user shell testing)\n");
     
-    // like GIC, disable timer init, for shell in this version
     /*
     uint64_t cntfrq;
     asm volatile("mrs %0, cntfrq_el0" : "=r" (cntfrq));
@@ -67,9 +65,7 @@ void timer_handler(void) {
     uint64_t interval = cntfrq / 1000;
     asm volatile("msr cntp_tval_el0, %0" :: "r" (interval));
     
-    // disable automatic scheduling during user shell
     // schedule();
-    
     
     gic_end_interrupt(irq);
 }

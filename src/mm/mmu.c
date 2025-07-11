@@ -16,7 +16,7 @@
         (((uint64_t)(pa_gib) << 30) | AF | ATTRIDX(attridx) | (extra) | \
          BLOCK | VALID)
 
-/* one 4 KiB aligned level1 table */
+/* one 4 KiB aligned level 1 table */
 __attribute__((aligned(4096))) static uint64_t l1[512];
 
 static inline void isb(void){ __asm__ volatile("isb"); }
@@ -62,7 +62,6 @@ l1[1] = L1_DESC(1, 0, AP_RW_EL1);
 /* 2-3 GiB user code+stack  EL0 RW/X (no UXN bit = user can execute)*/
 l1[2] = L1_DESC(2, 0, AP_RW_EL0);
 
-// debug...
 uart_puts("MMU L1 Block 0: "); uart_hex(l1[0]); uart_puts("\n");
 uart_puts("MMU L1 Block 1: "); uart_hex(l1[1]); uart_puts("\n");
 uart_puts("MMU L1 Block 2: "); uart_hex(l1[2]); uart_puts("\n");

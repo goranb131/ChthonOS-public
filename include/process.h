@@ -60,13 +60,13 @@ struct process {
 
 typedef struct process process_t;
 
-/* Functions to initialize process management, create processes, and schedule */
+/* functions to initialize process management, create processes, and schedule */
 void process_init(void);
 process_t* process_create(void (*entry)(void));
 void schedule(void);
 void process_exit(int status);
 
-/* Global pointer to the currently running process */
+/* global pointer to the currently running process */
 extern process_t *current_process;
 extern struct process *process_list;  
 

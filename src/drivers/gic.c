@@ -22,8 +22,6 @@ static unsigned int mmio_read(unsigned long addr) {
 }
 
 void gic_init(void) {
-    // disable GIC init for user shell in this version
-    // interrupts interfere with UART input
     /*
     mmio_write(GICD_BASE + GICD_CTLR, 1);
     

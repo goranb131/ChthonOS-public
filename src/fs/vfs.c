@@ -7,16 +7,13 @@
 #include "abyssfs.h"  
 #include "ramfs.h"     
 
-
 extern struct vfs_file_operations ramfs_fops;
 extern struct filesystem_type ramfs_fs_type;
 extern struct filesystem_type abyssfs_fs_type;
 
-
 #define MAX_FS 4
 static struct filesystem_type *registered_fs[MAX_FS];
 static int num_registered_fs = 0;
-
 
 struct mount {
     const char *path;
@@ -40,34 +37,41 @@ void vfs_normalize_path(char *path) {
     char *dst = temp;
     char *segment_start = NULL;
     
+    // init result
     temp[0] = '\0';
     
+    // absolute paths start with a slash
     if (*src == '/') {
         *dst++ = *src++;
     }
     
     while (*src) {
+        // skip consecutive slashes
         if (*src == '/' && (dst == temp || *(dst-1) == '/')) {
             src++;
             continue;
         }
         
+        // start from path segment
         if (*src == '/') {
             *dst++ = *src++;
             segment_start = dst;
             continue;
         }
         
+        // "." directory
         if (*src == '.' && (*(src+1) == '/' || *(src+1) == '\0')) {
             src++;
             continue;
         }
         
+        // ".." directory
         if (*src == '.' && *(src+1) == '.' && (*(src+2) == '/' || *(src+2) == '\0')) {
             src += 2;
             
+            // go back to previous segment
             if (dst > temp + 1) {  // not at root
-                dst--; 
+                dst--; // remove trailing slash
                 while (dst > temp && *(dst-1) != '/') {
                     dst--;
                 }
@@ -75,21 +79,24 @@ void vfs_normalize_path(char *path) {
             continue;
         }
         
+        // copy regular character
         *dst++ = *src++;
     }
     
+    // termination
     if (dst == temp) {
         *dst++ = '/';
     } else if (dst > temp + 1 && *(dst-1) == '/') {
-        dst--; 
+        dst--; // remove trailing slash except for root
     }
     *dst = '\0';
     
+    // copy normalized path back to original
     strcpy(path, temp);
     
-    /*uart_puts("DEBUG: After normalization: "); 
+    uart_puts("DEBUG: After normalization: "); 
     uart_puts(path); 
-    uart_puts("\n");*/
+    uart_puts("\n");
 }
 
 void vfs_init(void) {
@@ -135,7 +142,6 @@ int vfs_mount(const char *path, struct filesystem_type *fs) {
 
 static struct mount *find_mount(const char *path) {
     if (!path) return NULL;
-    
     
     if (path[0] == '\0' || strcmp(path, "/") == 0) {
         
@@ -184,23 +190,26 @@ static struct vfs_file *get_file(int fd) {
 
 
 int vfs_read_dir(const char *path, struct dirent *dirents, int max_entries) {
-    //uart_puts("VFS: vfs_read_dir called with path: ");
-    //uart_puts(path);
-    //uart_puts("\n");
+    uart_puts("VFS: vfs_read_dir called with path: ");
+    uart_puts(path);
+    uart_puts("\n");
 
+    // resolve path through namespaces
     char *resolved_path = resolve_namespace_path(path);
-    //uart_puts("VFS: Reading directory after namespace resolution: ");
-    //uart_puts(resolved_path);
-    //uart_puts("\n");
+    uart_puts("VFS: Reading directory after namespace resolution: ");
+    uart_puts(resolved_path);
+    uart_puts("\n");
 
+    // find appropriate filesystem
     struct mount *mp = find_mount(resolved_path);
     if (!mp) {
         uart_puts("VFS: No mount point found for path\n");
         return -1;
     }
 
-    //uart_puts("VFS: Found mount point, calling filesystem read_dir\n");
+    uart_puts("VFS: Found mount point, calling filesystem read_dir\n");
     
+    // call read_dir function
     return mp->fs->read_dir(resolved_path, dirents, max_entries);
 }
 
@@ -210,24 +219,26 @@ static char* resolve_namespace_path(const char *path) {
         return (char*)path;
     }
 
-    //uart_puts("VFS: Resolving path: ");
-    //uart_puts(path);
-    //uart_puts("\n");
+    uart_puts("VFS: Resolving path: ");
+    uart_puts(path);
+    uart_puts("\n");
 
     struct namespace *ns = current_process->ns.mounts;
     while (ns) {
-        //uart_puts("VFS: Checking binding: ");
-        //uart_puts(ns->new_path);
-        //uart_puts(" -> ");
-        //uart_puts(ns->old_path);
-        //uart_puts("\n");
+        uart_puts("VFS: Checking binding: ");
+        uart_puts(ns->new_path);
+        uart_puts(" -> ");
+        uart_puts(ns->old_path);
+        uart_puts("\n");
 
         size_t new_len = strlen(ns->new_path);
         if (strncmp(path, ns->new_path, new_len) == 0) {
             char *resolved = kalloc(VFS_MAX_PATH);
             if (!resolved) return (char*)path;
             
+            
             strcpy(resolved, ns->old_path);
+            
             
             if (path[new_len] != '\0') {
                 if (path[new_len] != '/' && resolved[strlen(resolved)-1] != '/') {
@@ -236,9 +247,9 @@ static char* resolve_namespace_path(const char *path) {
                 strcat(resolved, path + new_len);
             }
             
-            //uart_puts("VFS: Resolved path: ");
-            //uart_puts(resolved);
-            //uart_puts("\n");
+            uart_puts("VFS: Resolved path: ");
+            uart_puts(resolved);
+            uart_puts("\n");
             
             return resolved;
         }
@@ -255,11 +266,13 @@ int vfs_open(const char* path) {
     if (resolve_path(path, resolved_path) < 0) {
         return -1;
     }
-    
+
     struct filesystem_type* fs = NULL;
     if (strncmp(resolved_path, "/tmp/", 5) == 0) {
+       
         fs = &ramfs_fs_type;
     } else {
+       
         fs = &abyssfs_fs_type;
     }
 
@@ -281,9 +294,9 @@ int vfs_open(const char* path) {
 
 
 ssize_t vfs_read(int fd, void *buf, size_t count) {
-    //uart_puts("VFS: Reading from fd: ");
-    //uart_hex(fd);
-    //uart_puts("\n");
+    uart_puts("VFS: Reading from fd: ");
+    uart_hex(fd);
+    uart_puts("\n");
 
     if (fd < 0 || fd >= MAX_FD || !fd_table[fd]) {
         uart_puts("VFS: Invalid file descriptor\n");
@@ -296,18 +309,18 @@ ssize_t vfs_read(int fd, void *buf, size_t count) {
         return -1;
     }
 
-    //uart_puts("VFS: Reading using ");
-    //uart_puts(file->f_ops == &ramfs_fops ? "RAMFS" : "AbyssFS");
-    //uart_puts("\n");
+    uart_puts("VFS: Reading using ");
+    uart_puts(file->f_ops == &ramfs_fops ? "RAMFS" : "AbyssFS");
+    uart_puts("\n");
     
     return file->f_ops->read(file, buf, count);
 }
 
 
 int vfs_write(int fd, const void *buf, size_t count) {
-    //uart_puts("VFS: Writing to fd ");
-    //uart_hex(fd);
-    //uart_puts("\n");
+    uart_puts("VFS: Writing to fd ");
+    uart_hex(fd);
+    uart_puts("\n");
     
     struct vfs_file *file = get_file(fd);
     if (!file) {
@@ -342,9 +355,9 @@ struct vfs_file* get_fs_file(const char *path) {
 
 
 int handle_read_dir_message(struct Message *msg) {
-    //uart_puts("VFS: handle_read_dir_message called with path: ");
-    //uart_puts(msg->path ? msg->path : "NULL");
-    //uart_puts("\n");
+    uart_puts("VFS: handle_read_dir_message called with path: ");
+    uart_puts(msg->path ? msg->path : "NULL");
+    uart_puts("\n");
 
     if (!msg->path) {
         uart_puts("VFS: ERROR - msg->path is NULL\n");
@@ -354,16 +367,16 @@ int handle_read_dir_message(struct Message *msg) {
     static struct dirent dirents[32];  // static array for kernel use
     int max_entries = 32;
 
-    //uart_puts("VFS: About to call vfs_read_dir\n");
+    uart_puts("VFS: About to call vfs_read_dir\n");
     int entry_count = vfs_read_dir(msg->path, dirents, max_entries);
-    //uart_puts("VFS: vfs_read_dir returned ");
-    //uart_hex(entry_count);
-    //uart_puts(" entries\n");
+    uart_puts("VFS: vfs_read_dir returned ");
+    uart_hex(entry_count);
+    uart_puts(" entries\n");
     
     if (entry_count >= 0) {
-        // copy directory entries to user messages data field
-        // use the msg->data field to store the directory entries
-        // and msg->size to indicate how much space is available
+        // copy directory entries to user message data field
+        // using msg->data field to store directory entries
+        // and msg->size for how much space is available
         if (msg->data && msg->size >= entry_count * sizeof(struct dirent)) {
             // copy directory entries to user space
             for (int i = 0; i < entry_count; i++) {
@@ -371,16 +384,16 @@ int handle_read_dir_message(struct Message *msg) {
                 user_dirents[i] = dirents[i];
             }
             msg->dirent_count = entry_count;
-            //uart_puts("VFS: Setting dirent_count to ");
-            //uart_hex(entry_count);
-            //uart_puts(" at address ");
-            //uart_hex((uint64_t)&msg->dirent_count);
-            //uart_puts(" (offset from msg = ");
-            //uart_hex((uint64_t)&msg->dirent_count - (uint64_t)msg);
-            //uart_puts(")\n");
-            //uart_puts("VFS: Copied ");
-            //uart_hex(entry_count);
-            //uart_puts(" entries to user space\n");
+            uart_puts("VFS: Setting dirent_count to ");
+            uart_hex(entry_count);
+            uart_puts(" at address ");
+            uart_hex((uint64_t)&msg->dirent_count);
+            uart_puts(" (offset from msg = ");
+            uart_hex((uint64_t)&msg->dirent_count - (uint64_t)msg);
+            uart_puts(")\n");
+            uart_puts("VFS: Copied ");
+            uart_hex(entry_count);
+            uart_puts(" entries to user space\n");
         } else {
             uart_puts("VFS: No space provided for directory entries\n");
             msg->dirent_count = 0;
@@ -395,14 +408,14 @@ int resolve_path(const char *path, char *resolved) {
     struct namespace *ns = current_process->ns.mounts;
     while (ns) {
         if (strncmp(path, ns->old_path, strlen(ns->old_path)) == 0) {
+
             strcpy(resolved, ns->new_path);
             strcat(resolved, path + strlen(ns->old_path));
-
+            
             return 0;
         }
         ns = ns->next;
     }
-    
     
     strcpy(resolved, path);
     return 0;
@@ -410,7 +423,6 @@ int resolve_path(const char *path, char *resolved) {
 
 int vfs_create(const char *path) {
     char full_path[VFS_MAX_PATH];
-
     
     if (path[0] != '/') {
         strcpy(full_path, current_process->cwd);
@@ -421,7 +433,6 @@ int vfs_create(const char *path) {
     } else {
         strcpy(full_path, path);
     }
-
     
     if (strncmp(full_path, "/tmp/", 5) == 0 || strcmp(full_path, "/tmp") == 0) {
         struct vfs_file *file = ramfs_fs_type.create(full_path);
@@ -463,9 +474,9 @@ int vfs_close(int fd) {
 }
 
 int vfs_unlink(const char *path) {
-    //uart_puts("VFS: Unlinking file: ");
-    //uart_puts(path);
-    //uart_puts("\n");
+    uart_puts("VFS: Unlinking file: ");
+    uart_puts(path);
+    uart_puts("\n");
     
     char full_path[VFS_MAX_PATH];
     if (path[0] != '/') {
@@ -479,22 +490,20 @@ int vfs_unlink(const char *path) {
         strcpy(full_path, path);
     }
 
-    
     struct mount *mp = find_mount(full_path);
     if (!mp) {
         uart_puts("VFS: No mount point found\n");
         return -1;
     }
-
+    
     return mp->fs->unlink(path);
 }
 
 int vfs_mkdir(const char *path) {
-    //uart_puts("VFS: Creating directory: ");
-    //uart_puts(path);
-    //uart_puts("\n");
+    uart_puts("VFS: Creating directory: ");
+    uart_puts(path);
+    uart_puts("\n");
 
-    
     char full_path[VFS_MAX_PATH];
     if (path[0] != '/') {
         strcpy(full_path, current_process->cwd);
@@ -505,14 +514,12 @@ int vfs_mkdir(const char *path) {
     } else {
         strcpy(full_path, path);
     }
-
     
     struct mount *mp = find_mount(full_path);
     if (!mp) {
         uart_puts("VFS: No mount point found\n");
         return -1;
     }
-
     
     return mp->fs->mkdir(full_path);
 }
@@ -521,7 +528,6 @@ int vfs_remove_recursive(const char *path) {
     if (!path) {
         return -1;
     }
-    
     
     char full_path[VFS_MAX_PATH];
     if (path[0] != '/') {
